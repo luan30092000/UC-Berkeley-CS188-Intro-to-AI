@@ -41,8 +41,10 @@ class QLearningAgent(ReinforcementAgent):
     def __init__(self, **args):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
-
         "*** YOUR CODE HERE ***"
+        self.Q_values = util.Counter()
+
+
 
     def getQValue(self, state, action):
         """
@@ -51,6 +53,7 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
+        return self.Q_values[(state, action)]
         util.raiseNotDefined()
 
 
@@ -62,6 +65,14 @@ class QLearningAgent(ReinforcementAgent):
           terminal state, you should return a value of 0.0.
         """
         "*** YOUR CODE HERE ***"
+        if not self.getLegalActions(state):
+            return 0
+        max_value = float("-inf")
+        for action in self.getLegalActions(state):
+            temp_Q_value = self.getQValue(state, action)
+            if max_value < temp_Q_value:
+                max_value = temp_Q_value
+        return max_value
         util.raiseNotDefined()
 
     def computeActionFromQValues(self, state):
@@ -71,6 +82,12 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
+        if not self.getLegalActions(state):
+            return None
+        temp_values = util.Counter()
+        for action in self.getLegalActions(state):
+            temp_values[action] = self.getQValue(state, action)
+        return temp_values.argMax()
         util.raiseNotDefined()
 
     def getAction(self, state):
@@ -88,9 +105,10 @@ class QLearningAgent(ReinforcementAgent):
         legalActions = self.getLegalActions(state)
         action = None
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
-        return action
+        if not self.getLegalActions(state):     # there is no legal actions -> terminal state -> choose None as the action
+            return None
+        
+        return random.choice(legalActions) if util.flipCoin(self.epsilon) else self.computeActionFromQValues(state)     
 
     def update(self, state, action, nextState, reward):
         """
@@ -102,7 +120,13 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        old_Q_value = self.getQValue(state, action)
+        max_next_Q_value = self.computeValueFromQValues(nextState)
+
+        new_Q_value = (1 - self.alpha) * old_Q_value + self.alpha * (reward + self.discount * max_next_Q_value)
+
+        self.Q_values[(state,action)] = new_Q_value
+        # util.raiseNotDefined()
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
@@ -165,6 +189,10 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
+        w = self.weights
+        featureVector = self.featExtractor.getFeatures(state, action)
+        Q_value = w * featureVector
+        return Q_value
         util.raiseNotDefined()
 
     def update(self, state, action, nextState, reward):
@@ -172,7 +200,15 @@ class ApproximateQAgent(PacmanQAgent):
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        features = self.featExtractor.getFeatures(state, action).keys()
+        Q_value = self.getQValue(state, action)
+        max_next_Q_value = self.computeValueFromQValues(nextState)
+        
+        difference = reward + self.discount * max_next_Q_value - Q_value
+
+        for feature in features:
+            self.weights[feature] += self.alpha * difference * self.featExtractor.getFeatures(state,action)[feature]
+        # util.raiseNotDefined()
 
     def final(self, state):
         "Called at the end of each game."
@@ -183,4 +219,5 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # you might want to print your weights here for debugging
             "*** YOUR CODE HERE ***"
+
             pass
